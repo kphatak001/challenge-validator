@@ -181,4 +181,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add vendor profiles, fix guide
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+see [LICENSE](LICENSE).
