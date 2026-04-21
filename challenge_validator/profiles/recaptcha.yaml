@@ -1,0 +1,31 @@
+name: reCAPTCHA (Google)
+description: Google reCAPTCHA v2/v3 and Enterprise
+
+token_cookies:
+  - pattern: "_GRECAPTCHA"
+  - pattern: "rc::*"
+
+challenge_indicators:
+  status_codes: [403]
+  html_patterns:
+    - "g-recaptcha"
+    - "recaptcha/api.js"
+    - "recaptcha/enterprise.js"
+    - "grecaptcha"
+  headers: []
+
+score_headers:
+  - "x-recaptcha-score"
+
+token_ttl_seconds: 120
+challenge_timeout_seconds: 60
+
+sdk_script_patterns:
+  - "google.com/recaptcha"
+  - "gstatic.com/recaptcha"
+  - "recaptcha/api.js"
+  - "recaptcha/enterprise.js"
+
+widget_patterns:
+  - "g-recaptcha"
+  - "grecaptcha-badge"

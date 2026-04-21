@@ -1,0 +1,28 @@
+name: hCaptcha
+description: hCaptcha challenge and Enterprise bot detection
+
+token_cookies:
+  - pattern: "hc_accessibility"
+  - pattern: "hmt_id"
+
+challenge_indicators:
+  status_codes: [403]
+  html_patterns:
+    - "h-captcha"
+    - "hcaptcha.com/1/api.js"
+    - "hcaptcha-box"
+  headers: []
+
+score_headers:
+  - "x-hcaptcha-score"
+
+token_ttl_seconds: 300
+challenge_timeout_seconds: 60
+
+sdk_script_patterns:
+  - "hcaptcha.com"
+  - "hcaptcha"
+
+widget_patterns:
+  - "h-captcha"
+  - "hcaptcha-box"

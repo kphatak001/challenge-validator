@@ -1,0 +1,32 @@
+{
+  "challenge_page": {
+    "status_code": 403,
+    "headers": {"Content-Type": "text/html", "cf-mitigated": "challenge"},
+    "body": "<html><head><title>Just a moment...</title><script src=\"https://challenges.cloudflare.com/turnstile/v0/api.js\"></script></head><body><div class=\"cf-turnstile\">Checking if the site connection is secure</div><noscript>Please enable JavaScript</noscript></body></html>"
+  },
+  "success_page": {
+    "status_code": 200,
+    "headers": {"Content-Type": "text/html"},
+    "body": "<html><head><title>Welcome</title></head><body><h1>Hello World</h1><p>This is the main content of the page with enough text to pass the content length checks.</p></body></html>"
+  },
+  "json_error": {
+    "status_code": 403,
+    "headers": {"Content-Type": "application/json"},
+    "body": "{\"error\": \"forbidden\"}"
+  },
+  "rate_limited": {
+    "status_code": 429,
+    "headers": {"Content-Type": "text/html", "Retry-After": "30"},
+    "body": "<html><body>Rate limited</body></html>"
+  },
+  "blank_page": {
+    "status_code": 200,
+    "headers": {"Content-Type": "text/html"},
+    "body": ""
+  },
+  "with_score_header": {
+    "status_code": 200,
+    "headers": {"Content-Type": "text/html", "cf-bot-score": "85"},
+    "body": "<html><body>OK</body></html>"
+  }
+}

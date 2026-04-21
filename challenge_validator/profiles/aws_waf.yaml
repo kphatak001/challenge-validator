@@ -1,0 +1,150 @@
+name: AWS WAF (Bot Control + CAPTCHA)
+description: >
+  AWS WAF Bot Control, CAPTCHA action, Silent Challenge, and rate-limit rules.
+  Covers both targeted and common bot control rule groups.
+
+token_cookies:
+  - pattern: "aws-waf-token"
+  - pattern: "aws-waf-*"
+
+challenge_indicators:
+  # 403 = standard block
+  # 405 = CAPTCHA action response (WAF returns 405, not 403)
+  # 202 = Silent Challenge (browser JS challenge, no interstitial)
+  # 429 = rate-limit rule
+  status_codes: [403, 405, 202, 429]
+  html_patterns:
+    - "awsWafCaptcha"
+    - "aws-waf-captcha"
+    - "captcha.awswaf.com"
+    - "challenge.awswaf.com"
+    - "aws-waf-token"
+    - "AWSWAF"
+  headers:
+    - "x-amzn-waf-action"
+
+score_headers: []
+# AWS WAF Bot Control uses categorical labels (bot/not-bot, signal:automated,
+# signal:browser), NOT numeric scores. There is no x-bot-score header.
+# Score-based tests should SKIP on this profile.
+score_note: >
+  AWS WAF Bot Control does not expose a numeric bot score in response headers.
+  It uses WAF labels (e.g., awswaf:managed:aws:bot-control:bot:category:*)
+  that are evaluated server-side in WAF rules. Score transparency and threshold
+  tests are not applicable — use CloudWatch WAF logs to inspect labels.
+
+token_ttl_seconds: 300
+challenge_timeout_seconds: 30
+
+sdk_script_patterns:
+  - "captcha.awswaf.com"
+  - "challenge.awswaf.com"
+  - "awsWafCaptcha"
+  - "awsWafIntegration"
+  - "jsapi.js"
+
+widget_patterns:
+  - "aws-waf-captcha"
+  - "awsWafCaptchaContainer"
+
+# Vendor-specific notes surfaced by the reporter when relevant tests fail.
+vendor_notes:
+  cors_preflight: >
+    AWS WAF + Bot Control: The #1 cause of CORS preflight failures is the
+    TGT_VolumetricIpTokenAbsent rule in the targeted bot control rule group.
+    This rule blocks requests that lack an aws-waf-token — which includes ALL
+    OPTIONS preflight requests (browsers never attach cookies to preflight).
+
+    Fix: Add a scope-down statement to exclude OPTIONS from Bot Control evaluation:
+      {
+        "Statement": {
+          "NotStatement": {
+            "Statement": {
+              "ByteMatchStatement": {
+                "FieldToMatch": { "Method": {} },
+                "PositionalConstraint": "EXACTLY",
+                "SearchString": "OPTIONS",
+                "TextTransformations": [{ "Priority": 0, "Type": "NONE" }]
+              }
+            }
+          }
+        }
+      }
+    Apply this as the scope-down statement on the AWSManagedRulesBotControlRuleSet
+    managed rule group in your web ACL.
+
+    See: docs/aws-waf-integration.md
+
+  token_refresh_spa: >
+    AWS WAF: The JS SDK (awsWafIntegration / jsapi.js) does NOT auto-refresh
+    tokens in single-page apps. The token is acquired on page load and expires
+    after token_ttl_seconds (default 300s). SPAs that don't do full page reloads
+    will see token expiry mid-session.
+
+    Fix option 1 — Call AwsWafIntegration.getToken() on a timer:
+      setInterval(() => { AwsWafIntegration.getToken(); }, 240000); // 4 min
+
+    Fix option 2 — Call getToken() before every API request:
+      async function fetchWithWafToken(url, opts) {
+        await AwsWafIntegration.getToken();
+        return fetch(url, { ...opts, credentials: 'include' });
+      }
+
+    See: docs/aws-waf-integration.md
+
+  rate_limit_interaction: >
+    AWS WAF: Bot Control and rate-limit rules are independent rule groups
+    evaluated in priority order. A request can be challenged by Bot Control
+    AND counted toward a rate-limit rule simultaneously. After solving the
+    challenge, the burst of retried requests triggers the rate-limit.
+
+    Fix: Add a scope-down statement to your rate-limit rule that excludes
+    requests with a valid aws-waf-token (recently challenged users):
+      {
+        "ScopeDownStatement": {
+          "NotStatement": {
+            "Statement": {
+              "ByteMatchStatement": {
+                "FieldToMatch": { "SingleHeader": { "Name": "cookie" } },
+                "PositionalConstraint": "CONTAINS",
+                "SearchString": "aws-waf-token=",
+                "TextTransformations": [{ "Priority": 0, "Type": "NONE" }]
+              }
+            }
+          }
+        }
+      }
+
+    See: docs/aws-waf-integration.md
+
+  mobile_sdk_access: >
+    AWS WAF: The mobile SDK (WAF token provider for iOS/Android) requires
+    enabling the application integration SDK in your web ACL configuration.
+    It is NOT available by default — you must opt in via the AWS console or API.
+
+    Steps:
+    1. Open your web ACL in the AWS WAF console
+    2. Go to "Application integration" tab
+    3. Enable the SDK and note the integration URL
+    4. Use the AWS WAF Mobile SDK (available via CocoaPods / Maven)
+
+    The mobile SDK cannot be tested programmatically by this tool.
+    See: docs/aws-waf-integration.md
+
+  captcha_vs_challenge: >
+    AWS WAF has TWO distinct challenge mechanisms:
+    - CAPTCHA action: Returns 405 with an interactive CAPTCHA page
+    - Challenge action (Silent): Returns 202 with a JS-only browser challenge
+
+    The token_initial test checks for both. If you see 405, the rule uses CAPTCHA.
+    If you see 202, the rule uses Silent Challenge. Both set the aws-waf-token cookie.
+
+  score_not_available: >
+    AWS WAF Bot Control does not expose numeric bot scores in HTTP response
+    headers. It uses server-side WAF labels for classification. Score-based
+    tests are skipped for this profile. To inspect bot signals, enable WAF
+    logging and query labels in CloudWatch Logs Insights:
+      fields @timestamp, httpRequest.clientIp,
+             labels.name, labels.value
+      | filter labels.name like /bot-control/
+      | sort @timestamp desc

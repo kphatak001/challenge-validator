@@ -1,0 +1,44 @@
+name: Generic (any challenge SDK)
+description: Works with any bot-detection / challenge platform
+
+token_cookies:
+  - pattern: "*token*"
+  - pattern: "*challenge*"
+  - pattern: "*captcha*"
+  - pattern: "*clearance*"
+  - pattern: "*waf*"
+  - pattern: "*bot*"
+
+challenge_indicators:
+  status_codes: [403, 429, 503]
+  html_patterns:
+    - "captcha"
+    - "challenge"
+    - "verify you are human"
+    - "please wait"
+    - "checking your browser"
+    - "just a moment"
+  headers:
+    - "x-challenge"
+    - "x-captcha"
+
+score_headers:
+  - "x-bot-score"
+  - "x-risk-score"
+  - "x-waf-score"
+
+token_ttl_seconds: 300
+challenge_timeout_seconds: 30
+
+sdk_script_patterns:
+  - "captcha"
+  - "challenge"
+  - "turnstile"
+  - "recaptcha"
+  - "hcaptcha"
+
+widget_patterns:
+  - "cf-turnstile"
+  - "g-recaptcha"
+  - "h-captcha"
+  - "challenge-container"

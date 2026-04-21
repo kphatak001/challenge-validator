@@ -1,0 +1,35 @@
+name: Cloudflare (Turnstile + Bot Management)
+description: Cloudflare Turnstile, Bot Management, and WAF challenge rules
+
+token_cookies:
+  - pattern: "cf_clearance"
+  - pattern: "__cf_bm"
+  - pattern: "cf_chl_2"
+  - pattern: "cf_chl_prog"
+
+challenge_indicators:
+  status_codes: [403, 503]
+  html_patterns:
+    - "challenge-platform"
+    - "cf-turnstile"
+    - "cf-chl-widget"
+    - "Checking if the site connection is secure"
+    - "cf_chl_opt"
+  headers:
+    - "cf-mitigated: challenge"
+    - "cf-ray"
+
+score_headers:
+  - "cf-bot-score"
+
+token_ttl_seconds: 1800
+challenge_timeout_seconds: 30
+
+sdk_script_patterns:
+  - "challenges.cloudflare.com"
+  - "turnstile"
+  - "cf-challenge"
+
+widget_patterns:
+  - "cf-turnstile"
+  - "cf-chl-widget"
