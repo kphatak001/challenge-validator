@@ -11,6 +11,7 @@ STATUS_ICONS = {
     Status.PASS: "✅",
     Status.FAIL: "❌",
     Status.WARN: "⚠️",
+    Status.INFO: "ℹ️",
     Status.SKIP: "⏭️",
     Status.ERROR: "💥",
 }
@@ -61,7 +62,7 @@ def report_terminal(results: list[TestResult], verbose: bool = False, file=None,
             icon = STATUS_ICONS.get(t.status, "?")
             label = t.status.value.upper()
             print(f"  {icon} {label:5s} {t.name}", file=out)
-            if t.status in (Status.FAIL, Status.WARN, Status.ERROR, Status.SKIP) or verbose:
+            if t.status in (Status.FAIL, Status.WARN, Status.ERROR, Status.SKIP, Status.INFO) or verbose:
                 print(f"         → {t.message}", file=out)
             if t.fix_guide and t.status == Status.FAIL:
                 print(f"         → Fix: see {t.fix_guide}", file=out)

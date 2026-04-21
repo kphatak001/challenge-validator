@@ -184,6 +184,64 @@ class TestVendorNotes:
         assert note is None
 
 
+class TestBundleSize:
+    @patch("challenge_validator.tests.performance_ux.requests.get")
+    def test_no_scripts_returns_info(self, mock_get, profile):
+        mock_get.return_value = _mock_response("success_page")
+        t = PerformanceUxTests("https://example.com", profile=profile)
+        results = []
+        t._test_bundle_size(results)
+        r = results[0]
+        assert r.status == Status.INFO
+        assert "No SDK scripts" in r.message
+
+    @patch("challenge_validator.tests.performance_ux.requests.get")
+    def test_small_bundle_returns_info(self, mock_get, profile):
+        page_resp = MagicMock()
+        page_resp.text = '<html><script src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script></html>'
+        page_resp.content = page_resp.text.encode()
+        script_resp = MagicMock()
+        script_resp.content = b"x" * 50_000  # 50KB
+        mock_get.side_effect = [page_resp, script_resp]
+        t = PerformanceUxTests("https://example.com", profile=profile)
+        results = []
+        t._test_bundle_size(results)
+        r = results[0]
+        assert r.status == Status.INFO
+        assert "vendor_benchmarks" in r.details
+        assert "mitigation" in r.details
+        assert r.details["bundle_size_kb"] == 50
+
+    @patch("challenge_validator.tests.performance_ux.requests.get")
+    def test_large_bundle_returns_warn(self, mock_get, profile):
+        page_resp = MagicMock()
+        page_resp.text = '<html><script src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script></html>'
+        page_resp.content = page_resp.text.encode()
+        script_resp = MagicMock()
+        script_resp.content = b"x" * 250_000  # 250KB
+        mock_get.side_effect = [page_resp, script_resp]
+        t = PerformanceUxTests("https://example.com", profile=profile)
+        results = []
+        t._test_bundle_size(results)
+        r = results[0]
+        assert r.status == Status.WARN
+        assert "may impact page load" in r.message
+        assert "can't reduce it" in r.fix_guide
+
+    @patch("challenge_validator.tests.performance_ux.requests.get")
+    def test_never_returns_fail(self, mock_get, profile):
+        page_resp = MagicMock()
+        page_resp.text = '<html><script src="https://challenges.cloudflare.com/turnstile/v0/api.js"></script></html>'
+        page_resp.content = page_resp.text.encode()
+        script_resp = MagicMock()
+        script_resp.content = b"x" * 500_000  # 500KB — still not FAIL
+        mock_get.side_effect = [page_resp, script_resp]
+        t = PerformanceUxTests("https://example.com", profile=profile)
+        results = []
+        t._test_bundle_size(results)
+        assert results[0].status != Status.FAIL
+
+
 class TestReporter:
     def test_json_output(self, profile):
         from challenge_validator.reporter import report_json

@@ -84,19 +84,44 @@ class PerformanceUxTests(BaseTest):
                 except requests.RequestException:
                     scripts.append({"url": url, "bytes": None, "error": "fetch failed"})
 
-        details = {"scripts": scripts, "total_bytes": total}
+        size_kb = round(total / 1000)
+        vendor_benchmarks = {
+            "Cloudflare Turnstile": 35,
+            "reCAPTCHA Enterprise": 150,
+            "hCaptcha": 65,
+            "AWS WAF JS SDK": 20,
+            "DataDome": 95,
+        }
+        mitigation = [
+            "Lazy-load the SDK so it doesn't block initial render",
+            "Use async/defer on the script tag",
+            "Only load the SDK on pages that actually need challenges",
+        ]
+        benchmark_str = "Turnstile ~35KB, reCAPTCHA ~150KB, hCaptcha ~65KB"
+        fix_guide = (
+            "→ This is the vendor's bundle — you can't reduce it\n"
+            "→ Mitigate: lazy-load the SDK, use async/defer, only load on pages that need challenges"
+        )
+        details = {
+            "scripts": scripts,
+            "total_bytes": total,
+            "bundle_size_kb": size_kb,
+            "vendor_benchmarks": vendor_benchmarks,
+            "mitigation": mitigation,
+        }
+
+        msg = f"SDK JS bundle: {size_kb}KB — For reference: {benchmark_str}"
+
         if not scripts:
             results.append(TestResult("js_bundle_size", self.category, "SDK JavaScript bundle size",
-                                      Status.PASS, "No SDK scripts detected on page", details=details))
-        elif total < 100_000:
+                                      Status.INFO, "No SDK scripts detected on page", details=details))
+        elif size_kb > 200:
             results.append(TestResult("js_bundle_size", self.category, "SDK JavaScript bundle size",
-                                      Status.PASS, f"Total SDK JS: {total / 1000:.0f}KB", details=details))
-        elif total < 300_000:
-            results.append(TestResult("js_bundle_size", self.category, "SDK JavaScript bundle size",
-                                      Status.WARN, f"Total SDK JS: {total / 1000:.0f}KB (100-300KB)", details=details))
+                                      Status.WARN, f"{msg} — may impact page load",
+                                      fix_guide=fix_guide, details=details))
         else:
             results.append(TestResult("js_bundle_size", self.category, "SDK JavaScript bundle size",
-                                      Status.FAIL, f"Total SDK JS: {total / 1000:.0f}KB (>300KB)", details=details))
+                                      Status.INFO, msg, fix_guide=fix_guide, details=details))
 
     def _test_layout_shift(self, results):
         try:

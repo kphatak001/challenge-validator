@@ -9,6 +9,7 @@ class Status(str, Enum):
     PASS = "pass"
     FAIL = "fail"
     WARN = "warn"
+    INFO = "info"
     SKIP = "skip"
     ERROR = "error"
 
